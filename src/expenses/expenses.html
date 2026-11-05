@@ -66,6 +66,18 @@
       <h2 class="h5 mb-3" id="expense-list-title">Your expenses</h2>
       <p class="text-secondary" id="empty-message">Loading expenses...</p>
       <ul class="list-group" id="expense-list"></ul>
+      <nav class="d-flex justify-content-between align-items-center gap-3 mt-3"
+           id="expense-pagination" aria-label="Expense pages">
+        <button class="btn btn-outline-secondary btn-sm" id="expense-previous" type="button" disabled>
+          Previous
+        </button>
+        <span class="small text-secondary text-center" id="expense-page-status" aria-live="polite">
+          Page 1 of 1 · 0 expenses
+        </span>
+        <button class="btn btn-outline-secondary btn-sm" id="expense-next" type="button" disabled>
+          Next
+        </button>
+      </nav>
     </section>
 
     <section class="card mt-4" aria-labelledby="report-title">

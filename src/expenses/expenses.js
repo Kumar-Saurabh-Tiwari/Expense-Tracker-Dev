@@ -2,6 +2,9 @@ const form = document.querySelector('#expense-form');
 const list = document.querySelector('#expense-list');
 const message = document.querySelector('#message');
 const emptyMessage = document.querySelector('#empty-message');
+const expensePageStatus = document.querySelector('#expense-page-status');
+const expensePreviousButton = document.querySelector('#expense-previous');
+const expenseNextButton = document.querySelector('#expense-next');
 const addButton = document.querySelector('#add-button');
 const premiumForm = document.querySelector('#premium-form');
 const premiumButton = document.querySelector('#premium-button');
@@ -24,6 +27,7 @@ const downloadReportButton = document.querySelector('#download-report');
 const reportRows = document.querySelector('#report-rows');
 let paymentConfig;
 let expensesData = [];
+let expensePage = 1;
 let isPremiumUser = false;
 let suggestionTimer;
 let suggestionController;
@@ -302,7 +306,13 @@ function renderExpenses(expenses) {
   emptyMessage.textContent = expenses.length ? '' : 'No expenses yet. Add your first one above.';
   emptyMessage.classList.toggle('d-none', expenses.length > 0);
 
-  for (const expense of expenses) {
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(expenses.length / pageSize));
+  expensePage = Math.min(expensePage, totalPages);
+  const start = (expensePage - 1) * pageSize;
+  const pageExpenses = expenses.slice(start, start + pageSize);
+
+  for (const expense of pageExpenses) {
     const item = document.createElement('li');
     item.className = 'list-group-item d-flex justify-content-between align-items-center gap-3';
 
@@ -330,7 +340,28 @@ function renderExpenses(expenses) {
     item.append(details, actions);
     list.append(item);
   }
+
+  const firstItem = expenses.length ? start + 1 : 0;
+  const lastItem = Math.min(start + pageSize, expenses.length);
+  expensePageStatus.textContent =
+    `Page ${expensePage} of ${totalPages} · ${firstItem}-${lastItem} of ${expenses.length} expenses`;
+  expensePreviousButton.disabled = expensePage <= 1;
+  expenseNextButton.disabled = expensePage >= totalPages;
 }
+
+expensePreviousButton.addEventListener('click', () => {
+  if (expensePage > 1) {
+    expensePage -= 1;
+    renderExpenses(expensesData);
+  }
+});
+
+expenseNextButton.addEventListener('click', () => {
+  if (expensePage < Math.ceil(expensesData.length / 10)) {
+    expensePage += 1;
+    renderExpenses(expensesData);
+  }
+});
 
 async function loadExpenses() {
   const response = await fetch('/api/expenses');
@@ -503,6 +534,7 @@ form.addEventListener('submit', async (event) => {
     categoryManuallySelected = false;
     requestedSuggestionVersion = -1;
     categoryHint.textContent = 'AI will suggest a category from your description.';
+    expensePage = 1;
     await loadExpenses();
     await refreshLeaderboardIfVisible();
     showMessage('Expense added.', 'success');
