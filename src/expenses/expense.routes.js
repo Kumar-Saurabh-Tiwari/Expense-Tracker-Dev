@@ -1,11 +1,57 @@
 const express = require('express');
 const { db } = require('../config/database');
 const { requireLogin } = require('../auth/auth.middleware');
+const { suggestCategory, createSpendingInsight } = require('../gemini-setup/gemini-ai');
 
 const router = express.Router();
 const categories = ['Food', 'Petrol', 'Salary', 'Transport', 'Shopping', 'Bills', 'Other'];
 
 router.use(requireLogin);
+
+router.post('/suggest-category', async (req, res, next) => {
+  const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
+  if (!description || description.length > 255) {
+    return res.status(400).json({ message: 'Enter a description of up to 255 characters.' });
+  }
+
+  try {
+    const category = await suggestCategory(description);
+    return res.json({ category });
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({
+        message: `${error.publicMessage || 'AI suggestion is unavailable right now.'} Choose a category manually.`
+      });
+    }
+    return next(error);
+  }
+});
+
+router.get('/insight', async (req, res, next) => {
+  try {
+    const [categoryTotals] = await db.execute(
+      `SELECT category, SUM(amount) AS total, COUNT(*) AS count
+       FROM expenses
+       WHERE user_id = ? AND created_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 30 DAY)
+       GROUP BY category
+       ORDER BY total DESC`,
+      [req.session.user.id]
+    );
+    if (categoryTotals.length === 0) {
+      return res.json({ insight: 'Add a few expenses and I can share a spending insight.' });
+    }
+
+    const insight = await createSpendingInsight(categoryTotals);
+    return res.json({ insight });
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({
+        message: error.publicMessage || 'AI insight is unavailable right now. Please try again later.'
+      });
+    }
+    return next(error);
+  }
+});
 
 router.get('/', async (req, res, next) => {
   try {

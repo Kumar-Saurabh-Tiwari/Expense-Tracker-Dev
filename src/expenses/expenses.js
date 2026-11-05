@@ -11,7 +11,18 @@ const leaderboardSection = document.querySelector('#leaderboard-section');
 const leaderboardMessage = document.querySelector('#leaderboard-message');
 const leaderboardTable = document.querySelector('#leaderboard-table');
 const leaderboardList = document.querySelector('#leaderboard-list');
+const descriptionInput = document.querySelector('#description');
+const categorySelect = document.querySelector('#category');
+const categoryHint = document.querySelector('#category-hint');
+const insightButton = document.querySelector('#insight-button');
+const insightMessage = document.querySelector('#insight-message');
 let paymentConfig;
+let suggestionTimer;
+let suggestionController;
+let suggestionPromise;
+let suggestionVersion = 0;
+let requestedSuggestionVersion = -1;
+let categoryManuallySelected = false;
 
 function showMessage(text, type = 'danger') {
   message.textContent = text;
@@ -39,6 +50,77 @@ function formatAmount(amount) {
     currency: 'INR'
   }).format(Number(amount));
 }
+
+async function requestCategorySuggestion(version) {
+  suggestionController = new AbortController();
+  requestedSuggestionVersion = version;
+  const response = await fetch('/api/expenses/suggest-category', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description: descriptionInput.value.trim() }),
+    signal: suggestionController.signal
+  });
+  const result = await response.json();
+  if (response.status === 401) {
+    window.location.replace('/auth/');
+    return;
+  }
+  if (!response.ok) throw new Error(result.message || 'AI category suggestion is unavailable.');
+  if (version === suggestionVersion && !categoryManuallySelected) {
+    categorySelect.value = result.category;
+    categoryHint.textContent = `AI suggested ${result.category}. You can change it.`;
+  }
+}
+
+descriptionInput.addEventListener('input', () => {
+  suggestionVersion += 1;
+  categoryManuallySelected = false;
+  clearTimeout(suggestionTimer);
+  if (suggestionController) suggestionController.abort();
+  suggestionPromise = null;
+  requestedSuggestionVersion = -1;
+
+  const description = descriptionInput.value.trim();
+  if (!description) {
+    categoryHint.textContent = 'AI will suggest a category from your description.';
+    return;
+  }
+
+  categoryHint.textContent = 'AI is choosing a category...';
+  const version = suggestionVersion;
+  suggestionTimer = setTimeout(() => {
+    suggestionPromise = requestCategorySuggestion(version).catch((error) => {
+      if (error.name !== 'AbortError' && version === suggestionVersion) {
+        categoryHint.textContent = 'AI suggestion unavailable. Choose a category manually.';
+      }
+    });
+  }, 500);
+});
+
+categorySelect.addEventListener('change', () => {
+  categoryManuallySelected = true;
+  categoryHint.textContent = 'Using your selected category.';
+});
+
+insightButton.addEventListener('click', async () => {
+  insightButton.disabled = true;
+  insightMessage.className = 'mb-0 mt-3';
+  insightMessage.textContent = 'Thinking...';
+  try {
+    const response = await fetch('/api/expenses/insight');
+    const result = await response.json();
+    if (response.status === 401) {
+      window.location.replace('/auth/');
+      return;
+    }
+    if (!response.ok) throw new Error(result.message || 'Could not get an AI insight.');
+    insightMessage.textContent = result.insight;
+  } catch (error) {
+    insightMessage.textContent = error.message || 'Could not get an AI insight.';
+  } finally {
+    insightButton.disabled = false;
+  }
+});
 
 function renderLeaderboard(leaders) {
   leaderboardList.replaceChildren();
@@ -247,6 +329,17 @@ form.addEventListener('submit', async (event) => {
   addButton.disabled = true;
 
   try {
+    if (!categoryManuallySelected && descriptionInput.value.trim()) {
+      clearTimeout(suggestionTimer);
+      if (requestedSuggestionVersion !== suggestionVersion) {
+        suggestionPromise = requestCategorySuggestion(suggestionVersion).catch((error) => {
+          if (error.name !== 'AbortError') {
+            categoryHint.textContent = 'AI suggestion unavailable. Choose a category manually.';
+          }
+        });
+      }
+      if (suggestionPromise) await suggestionPromise;
+    }
     const expense = Object.fromEntries(new FormData(form));
     const response = await fetch('/api/expenses', {
       method: 'POST',
@@ -261,6 +354,10 @@ form.addEventListener('submit', async (event) => {
     if (!response.ok) throw new Error(result.message || 'Could not add the expense.');
 
     form.reset();
+    suggestionVersion += 1;
+    categoryManuallySelected = false;
+    requestedSuggestionVersion = -1;
+    categoryHint.textContent = 'AI will suggest a category from your description.';
     await loadExpenses();
     await refreshLeaderboardIfVisible();
     showMessage('Expense added.', 'success');
