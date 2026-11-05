@@ -24,7 +24,7 @@ router.post('/register', async (req, res, next) => {
     return res.status(201).json({ user: req.session.user });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ message: 'That email is already registered. Please log in.' });
+      return res.status(409).json({ message: 'User already exists' });
     }
     return next(error);
   }
