@@ -56,10 +56,21 @@ router.post('/orders', async (req, res, next) => {
     const orderId = `premium_${crypto.randomUUID().replace(/-/g, '')}`;
     returnUrl.searchParams.set('payment_order_id', orderId);
 
-    await db.execute(
-      'INSERT INTO payment_orders (order_id, user_id, amount, currency, status) VALUES (?, ?, ?, ?, ?)',
-      [orderId, user.id, amount.toFixed(2), currency, 'PENDING']
-    );
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute(
+        'INSERT INTO payment_orders (order_id, user_id, amount, currency, status) VALUES (?, ?, ?, ?, ?)',
+        [orderId, user.id, amount.toFixed(2), currency, 'PENDING']
+      );
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+
     try {
       const cashfreeOrder = await createCashfreeOrder({
         orderId,
@@ -80,10 +91,20 @@ router.post('/orders', async (req, res, next) => {
         currency
       });
     } catch (error) {
-      await db.execute(
-        'UPDATE payment_orders SET status = ? WHERE order_id = ? AND user_id = ? AND status = ?',
-        ['FAILED', orderId, user.id, 'PENDING']
-      );
+      const failedOrderConnection = await db.getConnection();
+      try {
+        await failedOrderConnection.beginTransaction();
+        await failedOrderConnection.execute(
+          'UPDATE payment_orders SET status = ? WHERE order_id = ? AND user_id = ? AND status = ?',
+          ['FAILED', orderId, user.id, 'PENDING']
+        );
+        await failedOrderConnection.commit();
+      } catch (updateError) {
+        await failedOrderConnection.rollback();
+        throw updateError;
+      } finally {
+        failedOrderConnection.release();
+      }
       throw error;
     }
   } catch (error) {
@@ -95,6 +116,27 @@ router.post('/orders', async (req, res, next) => {
 });
 
 router.get('/orders/:orderId', async (req, res, next) => {
+  try {
+    const [[order]] = await db.execute(
+      'SELECT status FROM payment_orders WHERE order_id = ? AND user_id = ? LIMIT 1',
+      [req.params.orderId, req.session.user.id]
+    );
+    if (!order) return res.status(404).json({ message: 'Payment order not found.' });
+
+    const [[user]] = await db.execute(
+      'SELECT is_premium FROM users WHERE id = ? LIMIT 1',
+      [req.session.user.id]
+    );
+    return res.json({
+      status: order.status,
+      isPremium: Boolean(user?.is_premium)
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post('/orders/:orderId/verify', async (req, res, next) => {
   const orderId = req.params.orderId;
 
   try {

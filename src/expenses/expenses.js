@@ -263,7 +263,9 @@ async function loadPremiumStatus() {
 
 async function verifyPayment(orderId) {
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    const response = await fetch(`/api/payments/orders/${encodeURIComponent(orderId)}`);
+    const response = await fetch(`/api/payments/orders/${encodeURIComponent(orderId)}/verify`, {
+      method: 'POST'
+    });
     if (response.status === 401) {
       window.location.replace('/auth/');
       return;

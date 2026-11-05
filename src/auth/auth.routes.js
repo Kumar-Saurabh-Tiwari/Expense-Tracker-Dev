@@ -15,18 +15,25 @@ router.post('/register', async (req, res, next) => {
     return res.status(400).json({ message: 'Enter your name, a valid email, and a password of 8-72 characters.' });
   }
 
+  let connection;
   try {
-    const [result] = await db.execute(
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+    const [result] = await connection.execute(
       'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)',
       [name, email, await hashPassword(password)]
     );
+    await connection.commit();
     req.session.user = { id: result.insertId, name, email };
     return res.status(201).json({ user: req.session.user });
   } catch (error) {
+    if (connection) await connection.rollback();
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ message: 'User already exists' });
     }
     return next(error);
+  } finally {
+    if (connection) connection.release();
   }
 });
 
@@ -51,13 +58,13 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({ message: 'User not authorized' });
     }
 
-    req.session.regenerate((error) => {
-      if (error) return next(error);
-      req.session.user = { id: user.id, name: user.name, email: user.email };
-      return res.json({
-        message: 'User login successful',
-        user: req.session.user
-      });
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((error) => error ? reject(error) : resolve());
+    });
+    req.session.user = { id: user.id, name: user.name, email: user.email };
+    return res.json({
+      message: 'User login successful',
+      user: req.session.user
     });
   } catch (error) {
     return next(error);
@@ -69,12 +76,16 @@ router.get('/me', (req, res) => {
   return res.json({ user: req.session.user });
 });
 
-router.post('/logout', (req, res, next) => {
-  req.session.destroy((error) => {
-    if (error) return next(error);
+router.post('/logout', async (req, res, next) => {
+  try {
+    await new Promise((resolve, reject) => {
+      req.session.destroy((error) => error ? reject(error) : resolve());
+    });
     res.clearCookie('connect.sid');
     return res.sendStatus(204);
-  });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 module.exports = router;
