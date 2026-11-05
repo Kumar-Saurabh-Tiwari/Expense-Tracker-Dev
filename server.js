@@ -8,6 +8,7 @@ const { requireLoginPage } = require('./src/auth/auth.middleware');
 const expenseRoutes = require('./src/expenses/expense.routes');
 const leaderboardRoutes = require('./src/leaderboard/leaderboard.routes');
 const paymentRoutes = require('./src/payments/payment.routes');
+const passwordRoutes = require('./src/password/password.routes');
 const { initializeDatabase } = require('./src/config/database');
 
 const required = ['SESSION_SECRET', 'DB_HOST', 'DB_USER', 'DB_NAME'];
@@ -46,6 +47,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/password', passwordRoutes);
 
 app.use((error, req, res, next) => {
   console.error(error);

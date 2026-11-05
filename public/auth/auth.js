@@ -1,6 +1,46 @@
 const form = document.querySelector('#auth-form');
 const message = document.querySelector('#message');
 const mode = form.dataset.mode;
+const forgotForm = document.querySelector('#forgot-password-form');
+const forgotLink = document.querySelector('#forgot-password-link');
+const forgotEmail = document.querySelector('#forgot-email');
+
+document.querySelector('#show-forgot-password')?.addEventListener('click', () => {
+  forgotEmail.value = form.elements.email.value;
+  form.classList.add('d-none');
+  forgotLink.classList.add('d-none');
+  document.querySelector('#auth-switch').classList.add('d-none');
+  forgotForm.classList.remove('d-none');
+  message.className = 'alert d-none';
+  forgotEmail.focus();
+});
+
+document.querySelector('#back-to-login')?.addEventListener('click', () => {
+  forgotForm.classList.add('d-none');
+  form.classList.remove('d-none');
+  forgotLink.classList.remove('d-none');
+  document.querySelector('#auth-switch').classList.remove('d-none');
+  message.className = 'alert d-none';
+});
+
+forgotForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const submit = document.querySelector('#forgot-submit-button');
+  submit.disabled = true;
+  message.className = 'alert d-none';
+  try {
+    const response = await axios.post('/password/forgotpassword', {
+      email: forgotEmail.value.trim()
+    });
+    message.textContent = response.data.message;
+    message.className = 'alert alert-success';
+  } catch (error) {
+    message.textContent = error.response?.data?.message || 'Could not send the email. Please try again.';
+    message.className = 'alert alert-danger';
+  } finally {
+    submit.disabled = false;
+  }
+});
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();

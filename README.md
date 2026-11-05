@@ -10,6 +10,7 @@ A small Node.js and Express app with Bootstrap signup and login pages. Users are
 - `src/leaderboard/` - premium-only all-time expense leaderboard using Sequelize
 - `src/gemini-setup/` - Gemini category suggestions and spending insights
 - `src/payments/` - Cashfree order creation and payment verification
+- `src/password/` - password-help email request
 - `src/config/` - MySQL connection and setup
 - `public/auth/` - signup and login page, styles, and browser JavaScript
 - `public/app/` - assets for future signed-in screens
@@ -38,6 +39,8 @@ Cashfree runs in Sandbox by default. Configure `CASHFREE_API_KEY` and `CASHFREE_
 The login page is at `/auth/` and signup is at `/auth/signup.html`. After login, the app opens at `/app/`. The app creates or updates the expenses table when it starts. Existing expenses are kept during the update; older rows without an owner stay unassigned. New expenses are saved per user through `POST /api/expenses` and loaded from `GET /api/expenses` whenever the app page opens or refreshes. The API also supports deleting an expense with `DELETE /api/expenses/:id`. Expense APIs require a logged-in session, and users can only access their own expenses.
 
 The login form sends `{ "email": "...", "password": "..." }` to `POST /api/auth/login`. A successful login returns `200` with `User login successful`; an unknown email returns `404 User not found`, and a wrong password returns `401 User not authorized`.
+
+The login page's "Forgot password?" form posts an email to `/password/forgotpassword` using Axios. Configure `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, and optionally `BREVO_SENDER_NAME` in `.env`. In Brevo (formerly Sendinblue), create an API key and verify the sender email before using this route. For privacy, it returns the same confirmation whether or not an account exists. A registered user receives a one-time reset link that expires after one hour; the token is stored hashed in the `password_reset_tokens` table, and resetting the password invalidates all outstanding reset links.
 
 The Buy premium membership button creates a `PENDING` order on the server and opens Cashfree checkout. On return, the server verifies the order using Cashfree's payments-for-order API. Only a verified successful payment sets the order to `SUCCESSFUL` and upgrades the user's account; a verified failed payment sets the order to `FAILED`.
 

@@ -48,6 +48,18 @@ async function initializeDatabase() {
   `);
 
   await db.execute(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      token_hash CHAR(64) NOT NULL PRIMARY KEY,
+      user_id INT UNSIGNED NOT NULL,
+      expires_at DATETIME NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX password_reset_user (user_id),
+      CONSTRAINT password_reset_user_fk FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE
+    )
+  `);
+
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS expenses (
       id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
       user_id INT UNSIGNED NOT NULL,
