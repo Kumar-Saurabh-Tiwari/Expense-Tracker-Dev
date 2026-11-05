@@ -1,15 +1,6 @@
 const form = document.querySelector('#auth-form');
 const message = document.querySelector('#message');
-const welcomePanel = document.querySelector('#welcome-panel');
-const authSwitch = document.querySelector('#auth-switch');
 const mode = form.dataset.mode;
-
-function showAccount(user) {
-  form.classList.add('d-none');
-  authSwitch.classList.add('d-none');
-  welcomePanel.classList.remove('d-none');
-  document.querySelector('#intro').textContent = `Welcome, ${user.name}!`;
-}
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -28,7 +19,7 @@ form.addEventListener('submit', async (event) => {
       message.className = 'alert alert-danger';
       return;
     }
-    showAccount(result.user);
+    window.location.assign('/app/');
   } catch {
     message.textContent = 'Could not reach the server. Please try again.';
     message.className = 'alert alert-danger';
@@ -37,19 +28,8 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
-document.querySelector('#logout-button').addEventListener('click', async () => {
-  try {
-    const response = await fetch('/api/auth/logout', { method: 'POST' });
-    if (!response.ok) throw new Error('Logout failed');
-    location.reload();
-  } catch {
-    message.textContent = 'Could not log out. Please try again.';
-    message.className = 'alert alert-danger';
-  }
-});
-
-fetch('/api/auth/me').then((response) => response.ok ? response.json() : null)
-  .then((result) => { if (result) showAccount(result.user); })
+fetch('/api/auth/me').then((response) => response.ok)
+  .then((loggedIn) => { if (loggedIn) window.location.replace('/app/'); })
   .catch(() => {
     message.textContent = 'Could not check your login status. Please refresh the page.';
     message.className = 'alert alert-danger';

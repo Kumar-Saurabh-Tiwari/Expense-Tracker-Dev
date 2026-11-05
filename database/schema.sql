@@ -10,3 +10,15 @@ CREATE TABLE IF NOT EXISTS users (
   PRIMARY KEY (id),
   UNIQUE KEY users_email_unique (email)
 );
+
+CREATE TABLE IF NOT EXISTS expenses (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX expenses_user_created (user_id, created_at),
+  CONSTRAINT expenses_user_fk FOREIGN KEY (user_id)
+    REFERENCES users (id) ON DELETE CASCADE
+);
