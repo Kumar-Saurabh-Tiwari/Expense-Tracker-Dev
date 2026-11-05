@@ -48,6 +48,8 @@ Database-changing API requests use MySQL transactions so related writes commit o
 
 Premium members see the message "You are a premium user now" after login and on page refresh. They can also view a top-10 leaderboard of user names and all-time expense totals at `GET /api/leaderboard`. Each user's running expense total is stored in `users.total_expenses` and updated in the same transaction as expense additions and deletions, so leaderboard reads do not aggregate the expenses table. Existing totals are backfilled once when the column is added. The leaderboard uses Sequelize; other app routes continue to use mysql2.
 
+The expense page includes a premium-only client-side daily, weekly, and monthly report with a CSV download. It uses expenses already loaded in the browser; `Salary` category records are shown as income in this report. Actual income entry and backend report/export endpoints are not implemented yet.
+
 Gemini suggests a category when you enter an expense description, and you can change the suggestion before saving. The "AI spending insight" button gives one short tip from category totals for the last 30 days. Set `GEMINI_API_KEY` in `.env`; keep the key on the server and do not commit it. If Gemini is unavailable, choose a category manually; adding expenses still works.
 
 Sessions are kept in memory, so they reset when the server restarts; this keeps the starter app simple. Do not use the example secret or commit your `.env` file.

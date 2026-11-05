@@ -16,7 +16,15 @@ const categorySelect = document.querySelector('#category');
 const categoryHint = document.querySelector('#category-hint');
 const insightButton = document.querySelector('#insight-button');
 const insightMessage = document.querySelector('#insight-message');
+const reportPeriod = document.querySelector('#report-period');
+const reportDate = document.querySelector('#report-date');
+const reportContent = document.querySelector('#report-content');
+const reportLocked = document.querySelector('#report-locked');
+const downloadReportButton = document.querySelector('#download-report');
+const reportRows = document.querySelector('#report-rows');
 let paymentConfig;
+let expensesData = [];
+let isPremiumUser = false;
 let suggestionTimer;
 let suggestionController;
 let suggestionPromise;
@@ -50,6 +58,135 @@ function formatAmount(amount) {
     currency: 'INR'
   }).format(Number(amount));
 }
+
+function dateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getReportRange() {
+  const [year, month, day] = reportDate.value.split('-').map(Number);
+  const selected = new Date(year, month - 1, day);
+  let start;
+  let end;
+
+  if (reportPeriod.value === 'daily') {
+    start = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate());
+    end = new Date(start);
+    end.setDate(end.getDate() + 1);
+  } else if (reportPeriod.value === 'weekly') {
+    start = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate());
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    end = new Date(start);
+    end.setDate(end.getDate() + 7);
+  } else {
+    start = new Date(selected.getFullYear(), selected.getMonth(), 1);
+    end = new Date(selected.getFullYear(), selected.getMonth() + 1, 1);
+  }
+
+  return { start, end };
+}
+
+function getReportItems() {
+  if (!reportDate.value) return [];
+  const { start, end } = getReportRange();
+  return expensesData
+    .map((expense) => ({ ...expense, reportDate: new Date(expense.created_at) }))
+    .filter((expense) =>
+      Number.isFinite(expense.reportDate.getTime()) &&
+      expense.reportDate >= start &&
+      expense.reportDate < end
+    )
+    .sort((left, right) => right.reportDate - left.reportDate || right.id - left.id);
+}
+
+function isIncomeItem(expense) {
+  return expense.type === 'income' ||
+    expense.transaction_type === 'income' ||
+    String(expense.category).toLowerCase() === 'salary';
+}
+
+function renderReport() {
+  const unlocked = isPremiumUser;
+  reportLocked.classList.toggle('d-none', unlocked);
+  reportContent.classList.toggle('d-none', !unlocked);
+  reportPeriod.disabled = !unlocked;
+  reportDate.disabled = !unlocked;
+  downloadReportButton.disabled = !unlocked;
+  if (!unlocked) return;
+
+  const items = getReportItems();
+  let income = 0;
+  let expenseTotal = 0;
+  reportRows.replaceChildren();
+
+  for (const item of items) {
+    const itemIsIncome = isIncomeItem(item);
+    const amount = Number(item.amount) || 0;
+    if (itemIsIncome) income += amount;
+    else expenseTotal += amount;
+
+    const row = document.createElement('tr');
+    const dateCell = document.createElement('td');
+    dateCell.textContent = item.reportDate.toLocaleDateString();
+    const descriptionCell = document.createElement('td');
+    descriptionCell.textContent = item.description;
+    const categoryCell = document.createElement('td');
+    categoryCell.textContent = item.category;
+    const incomeCell = document.createElement('td');
+    incomeCell.className = 'text-end';
+    incomeCell.textContent = itemIsIncome ? formatAmount(amount) : '—';
+    const expenseCell = document.createElement('td');
+    expenseCell.className = 'text-end';
+    expenseCell.textContent = itemIsIncome ? '—' : formatAmount(amount);
+    row.append(dateCell, descriptionCell, categoryCell, incomeCell, expenseCell);
+    reportRows.append(row);
+  }
+
+  document.querySelector('#report-income').textContent = formatAmount(income);
+  document.querySelector('#report-expenses').textContent = formatAmount(expenseTotal);
+  document.querySelector('#report-savings').textContent = formatAmount(income - expenseTotal);
+  document.querySelector('#report-income-total').textContent = formatAmount(income);
+  document.querySelector('#report-expense-total').textContent = formatAmount(expenseTotal);
+
+  const periodName = reportPeriod.value[0].toUpperCase() + reportPeriod.value.slice(1);
+  document.querySelector('#report-period-title').textContent = `${periodName} report`;
+  document.querySelector('#report-empty').classList.toggle('d-none', items.length > 0);
+}
+
+function downloadReport() {
+  if (!isPremiumUser) return;
+  const items = getReportItems();
+  const quote = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+  const rows = [
+    ['Date', 'Description', 'Category', 'Income', 'Expense'],
+    ...items.map((item) => {
+      const amount = Number(item.amount) || 0;
+      const itemIsIncome = isIncomeItem(item);
+      return [
+        item.reportDate.toLocaleDateString(),
+        item.description,
+        item.category,
+        itemIsIncome ? amount.toFixed(2) : '',
+        itemIsIncome ? '' : amount.toFixed(2)
+      ];
+    })
+  ];
+  const csv = rows.map((row) => row.map(quote).join(',')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `expense-report-${reportPeriod.value}-${reportDate.value}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+reportDate.value = dateInputValue(new Date());
+reportPeriod.addEventListener('change', renderReport);
+reportDate.addEventListener('change', renderReport);
+downloadReportButton.addEventListener('click', downloadReport);
 
 async function requestCategorySuggestion(version) {
   suggestionController = new AbortController();
@@ -159,6 +296,8 @@ async function refreshLeaderboardIfVisible() {
 }
 
 function renderExpenses(expenses) {
+  expensesData = expenses;
+  renderReport();
   list.replaceChildren();
   emptyMessage.textContent = expenses.length ? '' : 'No expenses yet. Add your first one above.';
   emptyMessage.classList.toggle('d-none', expenses.length > 0);
@@ -242,6 +381,8 @@ async function loadPremiumStatus() {
     }).format(result.amount);
 
   if (result.isPremium) {
+    isPremiumUser = true;
+    renderReport();
     premiumBanner.classList.remove('d-none');
     leaderboardSection.classList.remove('d-none');
     leaderboardMessage.textContent = 'Loading leaderboard...';
@@ -255,6 +396,8 @@ async function loadPremiumStatus() {
       leaderboardMessage.textContent = error.message || 'Could not load the leaderboard.';
     }
   } else {
+    isPremiumUser = false;
+    renderReport();
     premiumBanner.classList.add('d-none');
     leaderboardSection.classList.add('d-none');
     premiumButton.disabled = false;

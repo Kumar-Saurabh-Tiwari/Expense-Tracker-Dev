@@ -19,7 +19,7 @@
     </div>
   </nav>
 
-  <main class="container py-4" style="max-width: 760px">
+  <main class="container py-4" style="max-width: 90%">
     <div id="premium-banner" class="alert alert-success d-none" role="status">
       You are a premium user now
     </div>
@@ -66,6 +66,89 @@
       <h2 class="h5 mb-3" id="expense-list-title">Your expenses</h2>
       <p class="text-secondary" id="empty-message">Loading expenses...</p>
       <ul class="list-group" id="expense-list"></ul>
+    </section>
+
+    <section class="card mt-4" aria-labelledby="report-title">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h2 class="h5 mb-1" id="report-title">Income &amp; expense report</h2>
+            <p class="text-secondary small mb-0">Review your daily, weekly, or monthly activity.</p>
+            <p class="text-secondary small mb-0">Salary category entries are counted as income in this frontend report.</p>
+          </div>
+          <button class="btn btn-outline-primary btn-sm" id="download-report" type="button" disabled>
+            Download CSV
+          </button>
+        </div>
+
+        <div id="report-locked" class="alert alert-warning mb-0">
+          This report and download are available to premium members.
+          <button class="btn btn-warning btn-sm ms-2" type="button" data-bs-toggle="modal"
+                  data-bs-target="#premium-modal">Get premium</button>
+        </div>
+
+        <div id="report-content" class="d-none">
+          <div class="row g-2 align-items-end mb-3">
+            <div class="col-sm-5">
+              <label class="form-label" for="report-period">View by</label>
+              <select class="form-select" id="report-period">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly" selected>Monthly</option>
+              </select>
+            </div>
+            <div class="col-sm-5">
+              <label class="form-label" for="report-date">Choose date</label>
+              <input class="form-control" id="report-date" type="date">
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <div class="rounded border bg-light p-3 h-100">
+                <div class="small text-secondary">Income</div>
+                <div class="fw-semibold text-success" id="report-income">₹0.00</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="rounded border bg-light p-3 h-100">
+                <div class="small text-secondary">Expenses</div>
+                <div class="fw-semibold text-danger" id="report-expenses">₹0.00</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="rounded border bg-light p-3 h-100">
+                <div class="small text-secondary">Savings</div>
+                <div class="fw-semibold" id="report-savings">₹0.00</div>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="h6" id="report-period-title">Monthly report</h3>
+          <p class="small text-secondary d-none" id="report-empty">No activity for this period.</p>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+              <thead class="table-success">
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Description</th>
+                  <th scope="col">Category</th>
+                  <th scope="col" class="text-end">Income</th>
+                  <th scope="col" class="text-end">Expense</th>
+                </tr>
+              </thead>
+              <tbody id="report-rows"></tbody>
+              <tfoot class="table-light fw-semibold">
+                <tr>
+                  <td colspan="3">Total</td>
+                  <td class="text-end" id="report-income-total">₹0.00</td>
+                  <td class="text-end" id="report-expense-total">₹0.00</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="card mt-4" aria-labelledby="insight-title">
