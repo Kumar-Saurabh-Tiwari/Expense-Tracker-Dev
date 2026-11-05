@@ -29,6 +29,11 @@ const User = sequelize.define('User', {
   isPremium: {
     type: DataTypes.BOOLEAN,
     field: 'is_premium'
+  },
+  totalExpenses: {
+    type: DataTypes.DECIMAL(18, 2),
+    field: 'total_expenses',
+    allowNull: false
   }
 }, {
   tableName: 'users',

@@ -74,6 +74,27 @@ async function initializeDatabase() {
 
   await db.execute('ALTER TABLE expenses MODIFY description VARCHAR(255) NOT NULL');
 
+  const [totalExpensesColumn] = await db.execute(
+    `SELECT COLUMN_NAME
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'users'
+       AND COLUMN_NAME = 'total_expenses'`
+  );
+  if (totalExpensesColumn.length === 0) {
+    await db.execute(
+      'ALTER TABLE users ADD COLUMN total_expenses DECIMAL(18, 2) NOT NULL DEFAULT 0'
+    );
+    await db.execute(`
+      UPDATE users AS u
+      SET total_expenses = (
+        SELECT COALESCE(SUM(e.amount), 0)
+        FROM expenses AS e
+        WHERE e.user_id = u.id
+      )
+    `);
+  }
+
   const [userIndex] = await db.execute(
     `SELECT INDEX_NAME
      FROM information_schema.STATISTICS
@@ -85,15 +106,15 @@ async function initializeDatabase() {
     await db.execute('CREATE INDEX expenses_user_created ON expenses (user_id, created_at)');
   }
 
-  const [leaderboardIndex] = await db.execute(
+  const [oldLeaderboardIndex] = await db.execute(
     `SELECT INDEX_NAME
      FROM information_schema.STATISTICS
      WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME = 'expenses'
        AND INDEX_NAME = 'expenses_user_amount'`
   );
-  if (leaderboardIndex.length === 0) {
-    await db.execute('CREATE INDEX expenses_user_amount ON expenses (user_id, amount)');
+  if (oldLeaderboardIndex.length > 0) {
+    await db.execute('DROP INDEX expenses_user_amount ON expenses');
   }
 
   const [userForeignKey] = await db.execute(

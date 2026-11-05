@@ -1,7 +1,7 @@
 const express = require('express');
+const { Op } = require('sequelize');
 const { requireLogin } = require('../auth/auth.middleware');
-const { Sequelize } = require('sequelize');
-const { User, Expense } = require('../config/sequelize');
+const { User } = require('../config/sequelize');
 
 const router = express.Router();
 
@@ -19,19 +19,11 @@ router.get('/', async (req, res, next) => {
     }
 
     const leaders = await User.findAll({
-      attributes: [
-        'name',
-        [Sequelize.fn('SUM', Sequelize.col('expenses.amount')), 'totalSpent']
-      ],
-      include: [{
-        model: Expense,
-        as: 'expenses',
-        attributes: [],
-        required: true
-      }],
-      subQuery: false,
-      group: ['User.id', 'User.name'],
-      order: [[Sequelize.literal('totalSpent'), 'DESC'], ['name', 'ASC']],
+      attributes: ['name', 'totalExpenses'],
+      where: {
+        totalExpenses: { [Op.gt]: 0 }
+      },
+      order: [['totalExpenses', 'DESC'], ['name', 'ASC']],
       limit: 10,
       raw: true
     });
@@ -40,7 +32,7 @@ router.get('/', async (req, res, next) => {
       leaderboard: leaders.map((user, index) => ({
         rank: index + 1,
         name: user.name,
-        totalSpent: Number(user.totalSpent)
+        totalSpent: Number(user.totalExpenses)
       }))
     });
   } catch (error) {

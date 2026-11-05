@@ -40,21 +40,40 @@ router.post('/', async (req, res, next) => {
     return res.status(400).json({ message: 'Choose a valid expense category.' });
   }
 
+  let connection;
   try {
-    const [result] = await db.execute(
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+    const [users] = await connection.execute(
+      'SELECT id FROM users WHERE id = ? FOR UPDATE',
+      [req.session.user.id]
+    );
+    if (users.length === 0) {
+      await connection.rollback();
+      return res.status(401).json({ message: 'Please log in again.' });
+    }
+    const [result] = await connection.execute(
       `INSERT INTO expenses (user_id, amount, description, category)
        VALUES (?, ?, ?, ?)`,
       [req.session.user.id, amount, description, category]
     );
-    const [expenses] = await db.execute(
+    await connection.execute(
+      'UPDATE users SET total_expenses = total_expenses + ? WHERE id = ?',
+      [amount, req.session.user.id]
+    );
+    const [expenses] = await connection.execute(
       `SELECT id, amount, description, category, created_at
        FROM expenses
        WHERE id = ? AND user_id = ?`,
       [result.insertId, req.session.user.id]
     );
+    await connection.commit();
     return res.status(201).json({ expense: expenses[0] });
   } catch (error) {
+    if (connection) await connection.rollback();
     return next(error);
+  } finally {
+    if (connection) connection.release();
   }
 });
 
@@ -64,17 +83,41 @@ router.delete('/:id', async (req, res, next) => {
     return res.status(400).json({ message: 'Invalid expense.' });
   }
 
+  let connection;
   try {
-    const [result] = await db.execute(
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+    const [users] = await connection.execute(
+      'SELECT id FROM users WHERE id = ? FOR UPDATE',
+      [req.session.user.id]
+    );
+    if (users.length === 0) {
+      await connection.rollback();
+      return res.status(401).json({ message: 'Please log in again.' });
+    }
+    const [expenses] = await connection.execute(
+      'SELECT amount FROM expenses WHERE id = ? AND user_id = ? FOR UPDATE',
+      [id, req.session.user.id]
+    );
+    if (expenses.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: 'Expense not found.' });
+    }
+    await connection.execute(
       'DELETE FROM expenses WHERE id = ? AND user_id = ?',
       [id, req.session.user.id]
     );
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Expense not found.' });
-    }
+    await connection.execute(
+      'UPDATE users SET total_expenses = total_expenses - ? WHERE id = ?',
+      [expenses[0].amount, req.session.user.id]
+    );
+    await connection.commit();
     return res.sendStatus(204);
   } catch (error) {
+    if (connection) await connection.rollback();
     return next(error);
+  } finally {
+    if (connection) connection.release();
   }
 });
 

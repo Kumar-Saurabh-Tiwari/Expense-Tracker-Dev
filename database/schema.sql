@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(254) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   is_premium TINYINT(1) NOT NULL DEFAULT 0,
+  total_expenses DECIMAL(18, 2) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY users_email_unique (email)
@@ -20,7 +21,6 @@ CREATE TABLE IF NOT EXISTS expenses (
   category VARCHAR(50) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX expenses_user_created (user_id, created_at),
-  INDEX expenses_user_amount (user_id, amount),
   CONSTRAINT expenses_user_fk FOREIGN KEY (user_id)
     REFERENCES users (id) ON DELETE CASCADE
 );

@@ -40,6 +40,6 @@ The login form sends `{ "email": "...", "password": "..." }` to `POST /api/auth/
 
 The Buy premium membership button creates a `PENDING` order on the server and opens Cashfree checkout. On return, the server verifies the order using Cashfree's payments-for-order API. Only a verified successful payment sets the order to `SUCCESSFUL` and upgrades the user's account; a verified failed payment sets the order to `FAILED`.
 
-Premium members see the message "You are a premium user now" after login and on page refresh. They can also view a top-10 leaderboard of user names and all-time expense totals at `GET /api/leaderboard`. The leaderboard uses a Sequelize aggregation query and a `(user_id, amount)` index; other app routes continue to use mysql2. It is only available to premium members and refreshes when an expense is added or deleted.
+Premium members see the message "You are a premium user now" after login and on page refresh. They can also view a top-10 leaderboard of user names and all-time expense totals at `GET /api/leaderboard`. Each user's running expense total is stored in `users.total_expenses` and updated in the same transaction as expense additions and deletions, so leaderboard reads do not aggregate the expenses table. Existing totals are backfilled once when the column is added. The leaderboard uses Sequelize; other app routes continue to use mysql2.
 
 Sessions are kept in memory, so they reset when the server restarts; this keeps the starter app simple. Do not use the example secret or commit your `.env` file.
