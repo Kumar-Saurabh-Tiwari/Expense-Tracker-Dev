@@ -3,6 +3,10 @@ const list = document.querySelector('#expense-list');
 const message = document.querySelector('#message');
 const emptyMessage = document.querySelector('#empty-message');
 const addButton = document.querySelector('#add-button');
+const premiumForm = document.querySelector('#premium-form');
+const premiumButton = document.querySelector('#premium-button');
+const premiumMessage = document.querySelector('#premium-message');
+let paymentConfig;
 
 function showMessage(text, type = 'danger') {
   message.textContent = text;
@@ -12,6 +16,16 @@ function showMessage(text, type = 'danger') {
 function clearMessage() {
   message.textContent = '';
   message.className = 'alert d-none';
+}
+
+function showPremiumMessage(text, type = 'danger') {
+  premiumMessage.textContent = text;
+  premiumMessage.className = `alert alert-${type} mt-3 mb-0`;
+}
+
+function showAppMessage(text, type = 'danger') {
+  message.textContent = text;
+  message.className = `alert alert-${type}`;
 }
 
 function formatAmount(amount) {
@@ -87,6 +101,94 @@ async function deleteExpense(id, button) {
   }
 }
 
+async function loadPremiumStatus() {
+  const response = await fetch('/api/payments/status');
+  if (response.status === 401) {
+    window.location.replace('/auth/');
+    return;
+  }
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || 'Could not load membership status.');
+
+  paymentConfig = result;
+  document.querySelector('#premium-price').textContent =
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: result.currency
+    }).format(result.amount);
+
+  if (result.isPremium) {
+    premiumButton.textContent = 'Premium membership active';
+    premiumButton.disabled = true;
+    premiumButton.removeAttribute('data-bs-toggle');
+    premiumButton.removeAttribute('data-bs-target');
+  } else {
+    premiumButton.disabled = false;
+  }
+}
+
+async function verifyPayment(orderId) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const response = await fetch(`/api/payments/orders/${encodeURIComponent(orderId)}`);
+    if (response.status === 401) {
+      window.location.replace('/auth/');
+      return;
+    }
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || 'Could not verify the transaction.');
+
+    if (result.status === 'SUCCESSFUL') {
+      showAppMessage('Transaction successful', 'success');
+      await loadPremiumStatus();
+      return;
+    }
+    if (result.status === 'FAILED') {
+      showAppMessage('TRANSACTION FAILED.');
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+
+  showAppMessage('Payment is still processing. Please refresh to check again.', 'info');
+}
+
+premiumForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const payButton = document.querySelector('#pay-button');
+  payButton.disabled = true;
+  premiumMessage.className = 'alert d-none';
+
+  try {
+    if (typeof Cashfree !== 'function') {
+      throw new Error('Cashfree checkout could not be loaded. Please try again.');
+    }
+
+    const response = await fetch('/api/payments/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: new FormData(premiumForm).get('phone') })
+    });
+    const result = await response.json();
+    if (response.status === 401) {
+      window.location.replace('/auth/');
+      return;
+    }
+    if (!response.ok) throw new Error(result.message || 'Could not start the payment.');
+
+    const cashfree = Cashfree({ mode: paymentConfig.cashfreeMode });
+    await cashfree.checkout({
+      paymentSessionId: result.paymentSessionId,
+      redirectTarget: '_self'
+    });
+  } catch (error) {
+    showPremiumMessage(error.message || 'Could not start the payment. Please try again.');
+  } finally {
+    payButton.disabled = false;
+  }
+});
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   clearMessage();
@@ -126,19 +228,27 @@ document.querySelector('#logout-button').addEventListener('click', async () => {
   }
 });
 
-fetch('/api/auth/me')
-  .then(async (response) => {
-    if (response.status === 401) {
-      window.location.replace('/auth/');
-      return null;
-    }
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.message || 'Could not load your account.');
-    return result.user;
-  })
-  .then((user) => {
-    if (!user) return;
-    document.querySelector('#user-name').textContent = user.name;
-    return loadExpenses();
-  })
-  .catch((error) => showMessage(error.message || 'Could not load expenses.'));
+async function initializeApp() {
+  const response = await fetch('/api/auth/me');
+  if (response.status === 401) {
+    window.location.replace('/auth/');
+    return;
+  }
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || 'Could not load your account.');
+  document.querySelector('#user-name').textContent = result.user.name;
+
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('payment_order_id');
+  if (orderId) {
+    window.history.replaceState({}, '', '/app/');
+  }
+
+  const results = await Promise.allSettled([loadExpenses(), loadPremiumStatus()]);
+  for (const result of results) {
+    if (result.status === 'rejected') showAppMessage(result.reason.message || 'Could not load the app.');
+  }
+  if (orderId) await verifyPayment(orderId);
+}
+
+initializeApp().catch((error) => showAppMessage(error.message || 'Could not load the app.'));

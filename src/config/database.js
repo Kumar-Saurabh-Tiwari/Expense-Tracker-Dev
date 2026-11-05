@@ -19,6 +19,34 @@ async function initializeDatabase() {
     )
   `);
 
+  const [premiumColumn] = await db.execute(
+    `SELECT COLUMN_NAME
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'users'
+       AND COLUMN_NAME = 'is_premium'`
+  );
+  if (premiumColumn.length === 0) {
+    await db.execute(
+      'ALTER TABLE users ADD COLUMN is_premium TINYINT(1) NOT NULL DEFAULT 0'
+    );
+  }
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS payment_orders (
+      order_id VARCHAR(45) NOT NULL PRIMARY KEY,
+      user_id INT UNSIGNED NOT NULL,
+      amount DECIMAL(10, 2) NOT NULL,
+      currency VARCHAR(3) NOT NULL,
+      status ENUM('PENDING', 'SUCCESSFUL', 'FAILED') NOT NULL DEFAULT 'PENDING',
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX payment_orders_user_created (user_id, created_at),
+      CONSTRAINT payment_orders_user_fk FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE CASCADE
+    )
+  `);
+
   await db.execute(`
     CREATE TABLE IF NOT EXISTS expenses (
       id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -72,6 +100,7 @@ async function initializeDatabase() {
       REFERENCES users (id) ON DELETE CASCADE
     `);
   }
+
 }
 
 module.exports = { db, initializeDatabase };
