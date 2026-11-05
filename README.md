@@ -28,6 +28,6 @@ A small Node.js and Express app with Bootstrap signup and login pages. Users are
 
 4. Open <http://localhost:3000>.
 
-The login page is at `/auth/` and signup is at `/auth/signup.html`. The login form sends `{ "email": "...", "password": "..." }` to `POST /api/auth/login`.
+The login page is at `/auth/` and signup is at `/auth/signup.html`. The login form sends `{ "email": "...", "password": "..." }` to `POST /api/auth/login`. A successful login returns `200` with `User login successful`; an unknown email returns `404 User not found`, and a wrong password returns `401 User not authorized`.
 
 Sessions are kept in memory, so they reset when the server restarts; this keeps the starter app simple. Do not use the example secret or commit your `.env` file.

@@ -43,14 +43,21 @@ router.post('/login', async (req, res, next) => {
       [email]
     );
     const user = users[0];
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-      return res.status(401).json({ message: 'Email or password is incorrect.' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!(await bcrypt.compare(password, user.password_hash))) {
+      return res.status(401).json({ message: 'User not authorized' });
     }
 
     req.session.regenerate((error) => {
       if (error) return next(error);
       req.session.user = { id: user.id, name: user.name, email: user.email };
-      return res.json({ user: req.session.user });
+      return res.json({
+        message: 'User login successful',
+        user: req.session.user
+      });
     });
   } catch (error) {
     return next(error);
