@@ -1,15 +1,11 @@
 const express = require('express');
 const { db } = require('../config/database');
+const { requireLogin } = require('../auth/auth.middleware');
 
 const router = express.Router();
 const categories = ['Food', 'Petrol', 'Salary', 'Transport', 'Shopping', 'Bills', 'Other'];
 
-router.use((req, res, next) => {
-  if (!req.session.user) {
-    return res.status(401).json({ message: 'Please log in to manage expenses.' });
-  }
-  return next();
-});
+router.use(requireLogin);
 
 router.get('/', async (req, res, next) => {
   try {

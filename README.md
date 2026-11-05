@@ -5,6 +5,7 @@ A small Node.js and Express app with Bootstrap signup and login pages. Users are
 ## Folders
 
 - `src/auth/` - signup, login, and session API routes
+- `src/auth/auth.middleware.js` - shared login checks for pages and API routes
 - `src/expenses/` - authenticated expense API and app page
 - `src/config/` - MySQL connection and setup
 - `public/auth/` - signup and login page, styles, and browser JavaScript

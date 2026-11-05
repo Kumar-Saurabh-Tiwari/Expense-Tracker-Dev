@@ -4,6 +4,7 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const authRoutes = require('./src/auth/auth.routes');
+const { requireLoginPage } = require('./src/auth/auth.middleware');
 const expenseRoutes = require('./src/expenses/expense.routes');
 const { initializeDatabase } = require('./src/config/database');
 
@@ -27,14 +28,12 @@ app.use(session({
 }));
 
 function serveExpenseApp(req, res) {
-  if (!req.session.user) return res.redirect('/auth/');
   res.set('Cache-Control', 'no-store');
   return res.sendFile(path.join(__dirname, 'src', 'expenses', 'expenses.html'));
 }
 
-app.get(['/app', '/app/'], serveExpenseApp);
-app.get('/app/expenses.js', (req, res) => {
-  if (!req.session.user) return res.sendStatus(404);
+app.get(['/app', '/app/'], requireLoginPage, serveExpenseApp);
+app.get('/app/expenses.js', requireLoginPage, (req, res) => {
   return res.sendFile(path.join(__dirname, 'src', 'expenses', 'expenses.js'));
 });
 
