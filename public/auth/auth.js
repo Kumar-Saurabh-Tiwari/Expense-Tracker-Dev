@@ -1,39 +1,26 @@
 const form = document.querySelector('#auth-form');
 const message = document.querySelector('#message');
-const nameField = document.querySelector('#name-field');
 const welcomePanel = document.querySelector('#welcome-panel');
-let loginMode = false;
+const authSwitch = document.querySelector('#auth-switch');
+const mode = form.dataset.mode;
 
 function showAccount(user) {
   form.classList.add('d-none');
-  document.querySelector('#toggle-prompt').classList.add('d-none');
-  document.querySelector('#toggle-mode').classList.add('d-none');
+  authSwitch.classList.add('d-none');
   welcomePanel.classList.remove('d-none');
   document.querySelector('#intro').textContent = `Welcome, ${user.name}!`;
 }
-
-document.querySelector('#toggle-mode').addEventListener('click', () => {
-  loginMode = !loginMode;
-  nameField.classList.toggle('d-none', loginMode);
-  document.querySelector('#name').required = !loginMode;
-  document.querySelector('#password').autocomplete = loginMode ? 'current-password' : 'new-password';
-  document.querySelector('#submit-button').textContent = loginMode ? 'Log in' : 'Create account';
-  document.querySelector('#toggle-prompt').textContent = loginMode ? 'New here?' : 'Already have an account?';
-  document.querySelector('#toggle-mode').textContent = loginMode ? 'Sign up' : 'Log in';
-  document.querySelector('#intro').textContent = loginMode ? 'Welcome back.' : 'Create an account to get started.';
-  message.textContent = '';
-  message.className = 'alert d-none';
-});
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const submit = document.querySelector('#submit-button');
   submit.disabled = true;
   try {
-    const response = await fetch(`/api/auth/${loginMode ? 'login' : 'register'}`, {
+    const userDetails = Object.fromEntries(new FormData(form));
+    const response = await fetch(`/api/auth/${mode === 'login' ? 'login' : 'register'}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.fromEntries(new FormData(form)))
+      body: JSON.stringify(userDetails)
     });
     const result = await response.json();
     if (!response.ok) {
