@@ -6,6 +6,7 @@ const path = require('path');
 const authRoutes = require('./src/auth/auth.routes');
 const { requireLoginPage } = require('./src/auth/auth.middleware');
 const expenseRoutes = require('./src/expenses/expense.routes');
+const leaderboardRoutes = require('./src/leaderboard/leaderboard.routes');
 const paymentRoutes = require('./src/payments/payment.routes');
 const { initializeDatabase } = require('./src/config/database');
 
@@ -43,6 +44,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => res.redirect('/auth/'));
 app.use('/api/auth', authRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/payments', paymentRoutes);
 
 app.use((error, req, res, next) => {

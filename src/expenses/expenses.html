@@ -20,6 +20,9 @@
   </nav>
 
   <main class="container py-4" style="max-width: 760px">
+    <div id="premium-banner" class="alert alert-success d-none" role="status">
+      You are a premium user now
+    </div>
     <h1 class="h3 mb-4">My expenses</h1>
 
     <section class="card mb-4">
@@ -62,6 +65,26 @@
       <h2 class="h5 mb-3" id="expense-list-title">Your expenses</h2>
       <p class="text-secondary" id="empty-message">Loading expenses...</p>
       <ul class="list-group" id="expense-list"></ul>
+    </section>
+
+    <section id="leaderboard-section" class="card mt-4 d-none" aria-labelledby="leaderboard-title">
+      <div class="card-body">
+        <h2 class="h5 mb-1" id="leaderboard-title">User leaderboard</h2>
+        <p class="text-secondary small mb-3">Top users by total expenses</p>
+        <p id="leaderboard-message" class="text-secondary mb-0">Loading leaderboard...</p>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 d-none" id="leaderboard-table">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">User</th>
+                <th scope="col" class="text-end">Total spent</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-list"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
   </main>
   <div class="modal fade" id="premium-modal" tabindex="-1" aria-labelledby="premium-modal-title" aria-hidden="true">

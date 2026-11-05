@@ -6,6 +6,11 @@ const addButton = document.querySelector('#add-button');
 const premiumForm = document.querySelector('#premium-form');
 const premiumButton = document.querySelector('#premium-button');
 const premiumMessage = document.querySelector('#premium-message');
+const premiumBanner = document.querySelector('#premium-banner');
+const leaderboardSection = document.querySelector('#leaderboard-section');
+const leaderboardMessage = document.querySelector('#leaderboard-message');
+const leaderboardTable = document.querySelector('#leaderboard-table');
+const leaderboardList = document.querySelector('#leaderboard-list');
 let paymentConfig;
 
 function showMessage(text, type = 'danger') {
@@ -33,6 +38,42 @@ function formatAmount(amount) {
     style: 'currency',
     currency: 'INR'
   }).format(Number(amount));
+}
+
+function renderLeaderboard(leaders) {
+  leaderboardList.replaceChildren();
+  for (const leader of leaders) {
+    const row = document.createElement('tr');
+    const rank = document.createElement('th');
+    rank.scope = 'row';
+    rank.textContent = leader.rank;
+    const name = document.createElement('td');
+    name.textContent = leader.name;
+    const total = document.createElement('td');
+    total.className = 'text-end';
+    total.textContent = formatAmount(leader.totalSpent);
+    row.append(rank, name, total);
+    leaderboardList.append(row);
+  }
+  leaderboardMessage.textContent = leaders.length ? '' : 'No expenses to rank yet.';
+  leaderboardTable.classList.toggle('d-none', leaders.length === 0);
+}
+
+async function loadLeaderboard() {
+  const response = await fetch('/api/leaderboard');
+  if (response.status === 401) {
+    window.location.replace('/auth/');
+    return;
+  }
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || 'Could not load the leaderboard.');
+  renderLeaderboard(result.leaderboard);
+}
+
+async function refreshLeaderboardIfVisible() {
+  if (!leaderboardSection.classList.contains('d-none')) {
+    await loadLeaderboard();
+  }
 }
 
 function renderExpenses(expenses) {
@@ -94,6 +135,7 @@ async function deleteExpense(id, button) {
       throw new Error(result.message || 'Could not delete the expense.');
     }
     await loadExpenses();
+    await refreshLeaderboardIfVisible();
     clearMessage();
   } catch (error) {
     showMessage(error.message);
@@ -118,11 +160,21 @@ async function loadPremiumStatus() {
     }).format(result.amount);
 
   if (result.isPremium) {
+    premiumBanner.classList.remove('d-none');
+    leaderboardSection.classList.remove('d-none');
+    leaderboardMessage.textContent = 'Loading leaderboard...';
     premiumButton.textContent = 'Premium membership active';
     premiumButton.disabled = true;
     premiumButton.removeAttribute('data-bs-toggle');
     premiumButton.removeAttribute('data-bs-target');
+    try {
+      await loadLeaderboard();
+    } catch (error) {
+      leaderboardMessage.textContent = error.message || 'Could not load the leaderboard.';
+    }
   } else {
+    premiumBanner.classList.add('d-none');
+    leaderboardSection.classList.add('d-none');
     premiumButton.disabled = false;
   }
 }
@@ -210,6 +262,7 @@ form.addEventListener('submit', async (event) => {
 
     form.reset();
     await loadExpenses();
+    await refreshLeaderboardIfVisible();
     showMessage('Expense added.', 'success');
   } catch (error) {
     showMessage(error.message || 'Could not reach the server. Please try again.');

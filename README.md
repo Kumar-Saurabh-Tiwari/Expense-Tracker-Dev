@@ -7,6 +7,7 @@ A small Node.js and Express app with Bootstrap signup and login pages. Users are
 - `src/auth/` - signup, login, and session API routes
 - `src/auth/auth.middleware.js` - shared login checks for pages and API routes
 - `src/expenses/` - authenticated expense API and app page
+- `src/leaderboard/` - premium-only all-time expense leaderboard
 - `src/payments/` - Cashfree order creation and payment verification
 - `src/config/` - MySQL connection and setup
 - `public/auth/` - signup and login page, styles, and browser JavaScript
@@ -38,5 +39,7 @@ The login page is at `/auth/` and signup is at `/auth/signup.html`. After login,
 The login form sends `{ "email": "...", "password": "..." }` to `POST /api/auth/login`. A successful login returns `200` with `User login successful`; an unknown email returns `404 User not found`, and a wrong password returns `401 User not authorized`.
 
 The Buy premium membership button creates a `PENDING` order on the server and opens Cashfree checkout. On return, the server verifies the order using Cashfree's payments-for-order API. Only a verified successful payment sets the order to `SUCCESSFUL` and upgrades the user's account; a verified failed payment sets the order to `FAILED`.
+
+Premium members see the message "You are a premium user now" after login and on page refresh. They can also view a top-10 leaderboard of user names and all-time expense totals at `GET /api/leaderboard`. It is only available to premium members and refreshes when an expense is added or deleted.
 
 Sessions are kept in memory, so they reset when the server restarts; this keeps the starter app simple. Do not use the example secret or commit your `.env` file.
