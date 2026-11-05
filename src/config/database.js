@@ -85,6 +85,17 @@ async function initializeDatabase() {
     await db.execute('CREATE INDEX expenses_user_created ON expenses (user_id, created_at)');
   }
 
+  const [leaderboardIndex] = await db.execute(
+    `SELECT INDEX_NAME
+     FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'expenses'
+       AND INDEX_NAME = 'expenses_user_amount'`
+  );
+  if (leaderboardIndex.length === 0) {
+    await db.execute('CREATE INDEX expenses_user_amount ON expenses (user_id, amount)');
+  }
+
   const [userForeignKey] = await db.execute(
     `SELECT CONSTRAINT_NAME
      FROM information_schema.KEY_COLUMN_USAGE

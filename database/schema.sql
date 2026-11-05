@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS expenses (
   category VARCHAR(50) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX expenses_user_created (user_id, created_at),
+  INDEX expenses_user_amount (user_id, amount),
   CONSTRAINT expenses_user_fk FOREIGN KEY (user_id)
     REFERENCES users (id) ON DELETE CASCADE
 );
