@@ -1,6 +1,6 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const { db } = require('../config/database');
+const { hashPassword, checkPassword } = require('./password');
 
 const router = express.Router();
 
@@ -18,7 +18,7 @@ router.post('/register', async (req, res, next) => {
   try {
     const [result] = await db.execute(
       'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)',
-      [name, email, await bcrypt.hash(password, 10)]
+      [name, email, await hashPassword(password)]
     );
     req.session.user = { id: result.insertId, name, email };
     return res.status(201).json({ user: req.session.user });
@@ -47,7 +47,7 @@ router.post('/login', async (req, res, next) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (!(await bcrypt.compare(password, user.password_hash))) {
+    if (!(await checkPassword(password, user.password_hash))) {
       return res.status(401).json({ message: 'User not authorized' });
     }
 
