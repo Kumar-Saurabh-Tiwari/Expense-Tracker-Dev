@@ -3,10 +3,11 @@ const express = require('express');
 const { db } = require('../config/database');
 const { requireLogin } = require('../auth/auth.middleware');
 const { createCashfreeOrder, PGOrderFetchPayments } = require('./payment.service');
+const logger = require('../config/logger');
 
 const router = express.Router();
-const premiumAmount = process.env.PREMIUM_AMOUNT || '199.00';
-const currency = process.env.PREMIUM_CURRENCY || 'INR';
+const premiumAmount = process.env.PREMIUM_AMOUNT;
+const currency = process.env.PREMIUM_CURRENCY;
 const terminalFailureStatuses = new Set(['FAILED', 'USER_DROPPED', 'CANCELLED']);
 
 router.use(requireLogin);
@@ -40,7 +41,7 @@ router.post('/orders', async (req, res, next) => {
     return res.status(500).json({ message: 'Premium membership price is not configured correctly.' });
   }
 
-  const returnUrl = new URL('/app/', process.env.APP_URL || 'http://localhost:3000');
+  const returnUrl = new URL('/app/', process.env.APP_URL);
 
   try {
     const [users] = await db.execute(
@@ -109,6 +110,10 @@ router.post('/orders', async (req, res, next) => {
     }
   } catch (error) {
     if (error.status) {
+      logger.warn('Payment provider request failed', {
+        statusCode: error.status,
+        message: error.message
+      });
       return res.status(error.status).json({ message: error.message });
     }
     return next(error);

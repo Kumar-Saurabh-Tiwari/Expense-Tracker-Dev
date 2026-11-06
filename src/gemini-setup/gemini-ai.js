@@ -1,10 +1,12 @@
 const { GoogleGenAI } = require('@google/genai');
+const logger = require('../config/logger');
 
 const categories = ['Food', 'Petrol', 'Salary', 'Transport', 'Shopping', 'Bills', 'Other'];
 
 async function askGemini(prompt) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    logger.warn('Gemini is not configured.');
     throw Object.assign(new Error('Gemini is not configured.'), {
       status: 503,
       publicMessage: 'AI is not configured. Set GEMINI_API_KEY and restart the app.'
@@ -24,7 +26,10 @@ async function askGemini(prompt) {
       retries: { strategy: 'none' }
     });
   } catch (error) {
-    console.error('Gemini API request failed:', error.status || error.name || 'unknown error');
+    logger.error('Gemini API request failed', {
+      statusCode: error.status,
+      errorName: error.name || 'unknown'
+    });
     const temporaryFailure = [429, 500, 502, 503, 504].includes(error.status) ||
       /timeout|connection/i.test(error.name || '');
     throw Object.assign(

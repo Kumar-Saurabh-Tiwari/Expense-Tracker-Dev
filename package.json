@@ -15,7 +15,8 @@
     "express": "^4.21.2",
     "express-session": "^1.18.1",
     "mysql2": "^3.24.6",
-    "sequelize": "^6.37.8"
+    "sequelize": "^6.37.8",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "sequelize-cli": "^6.6.5"

@@ -24,7 +24,7 @@ A small Node.js and Express app with Bootstrap signup and login pages. Users are
 ## Run locally
 
 1. Run `database/schema.sql` in MySQL to create the database, users, expenses, and payment-orders tables.
-2. Copy `.env.example` to `.env` and set your MySQL details and a long random `SESSION_SECRET`.
+2. Copy `.env.example` to `.env` and set your MySQL details and a long random `SESSION_SECRET`. Keep `.env` private; only commit `.env.example`.
 3. Install packages and start the app:
 
    ```sh
@@ -35,6 +35,18 @@ A small Node.js and Express app with Bootstrap signup and login pages. Users are
 4. Open <http://localhost:3000>.
 
 Database changes are managed with Sequelize migrations. After the app has created the database tables, apply pending migrations with `npm run db:migrate`; use `npm run db:migrate:undo` to roll back the latest migration.
+
+## Deployment configuration
+
+Set the environment variables from `.env.example` in the deployment platform; do not deploy `.env` or use the example placeholder credentials. `PORT`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `SESSION_SECRET`, `APP_URL`, `PREMIUM_AMOUNT`, `PREMIUM_CURRENCY`, `CASHFREE_ENV`, and `CASHFREE_API_VERSION` are required. `SESSION_MAX_AGE_MS` defaults to 86400000 (24 hours), and `TRUST_PROXY_HOPS` defaults to `0`. Use `NODE_ENV=production`, a strong unique session secret, an HTTPS `APP_URL`, and production Cashfree credentials/settings before accepting payments. Set `TRUST_PROXY_HOPS` to the number of trusted reverse proxies in front of the app (commonly `1` when TLS terminates at a single proxy). Configure Brevo and Gemini credentials only when those features are enabled.
+
+Application, request, provider-error, and uncaught exception/rejection logs are written under `LOG_FILE` (default `logs/app.log`); fatal process errors are also recorded in `logs/exceptions.log`. The `logs/` directory is ignored by Git. Configure `LOG_FILE` to point to a persistent writable volume in deployments where the filesystem is ephemeral.
+
+The app serves static client-side assets and does not use asset-compression middleware; no server-side rendering or asset compression step is required.
+
+This project currently integrates Cashfree for payments and Brevo's email API for password resets. It does not use Razorpay or Nodemailer; configure the provider variables documented below rather than adding unrelated provider keys.
+
+Sessions currently use Express's in-memory store. This is suitable only for a single running instance and sessions are lost on restart; configure a shared persistent session store before running multiple instances or requiring session persistence across deployments.
 
 Cashfree runs in Sandbox by default. Configure `CASHFREE_API_KEY` and `CASHFREE_API_SECRET` in `.env`, and keep the secret server-side. Premium membership costs ₹199 INR by default; `PREMIUM_AMOUNT`, `PREMIUM_CURRENCY`, `CASHFREE_ENV`, `CASHFREE_API_VERSION`, and `APP_URL` can be set in `.env`. The checkout asks for the customer's 10-digit Indian mobile number because Cashfree requires it.
 

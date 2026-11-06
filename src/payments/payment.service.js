@@ -1,4 +1,4 @@
-const CASHFREE_API_VERSION = process.env.CASHFREE_API_VERSION || '2026-01-01';
+const CASHFREE_API_VERSION = process.env.CASHFREE_API_VERSION;
 
 function getApiBaseUrl() {
   return process.env.CASHFREE_ENV === 'production'

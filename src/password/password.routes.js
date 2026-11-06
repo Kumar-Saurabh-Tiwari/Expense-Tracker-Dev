@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { db } = require('../config/database');
 const { hashPassword } = require('../auth/password');
+const logger = require('../config/logger');
 
 const router = express.Router();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -15,6 +16,7 @@ router.post('/forgotpassword', async (req, res, next) => {
   const apiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
   const senderEmail = process.env.BREVO_SENDER_EMAIL;
   if (!apiKey || !senderEmail) {
+    logger.warn('Password-reset email service is not configured.');
     return res.status(503).json({ message: 'Email service is not configured yet.' });
   }
 
@@ -45,9 +47,9 @@ router.post('/forgotpassword', async (req, res, next) => {
     connection = null;
 
     if (users.length > 0) {
-      const senderName = process.env.BREVO_SENDER_NAME || 'Expense Tracker';
+      const senderName = process.env.BREVO_SENDER_NAME;
 
-      const resetUrl = new URL('/auth/reset-password.html', process.env.APP_URL || 'http://localhost:3000');
+      const resetUrl = new URL('/auth/reset-password.html', process.env.APP_URL);
       resetUrl.searchParams.set('token', token);
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
@@ -66,8 +68,7 @@ router.post('/forgotpassword', async (req, res, next) => {
       });
 
       if (!response.ok) {
-        const result = await response.json().catch(() => ({}));
-        console.error('Brevo email request failed:', response.status, result.code || '', result.message || '');
+        logger.error('Brevo email request failed', { statusCode: response.status });
         return res.status(502).json({ message: 'Could not send the email right now. Please try again later.' });
       }
     }
