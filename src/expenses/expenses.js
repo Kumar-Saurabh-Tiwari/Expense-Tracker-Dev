@@ -3,6 +3,7 @@ const list = document.querySelector('#expense-list');
 const message = document.querySelector('#message');
 const emptyMessage = document.querySelector('#empty-message');
 const expensePageStatus = document.querySelector('#expense-page-status');
+const expensePageSizeSelect = document.querySelector('#expense-page-size');
 const expensePreviousButton = document.querySelector('#expense-previous');
 const expenseNextButton = document.querySelector('#expense-next');
 const addButton = document.querySelector('#add-button');
@@ -28,6 +29,8 @@ const reportRows = document.querySelector('#report-rows');
 let paymentConfig;
 let expensesData = [];
 let expensePage = 1;
+const expensePageSizeStorageKey = 'expense-tracker-expense-page-size';
+const validExpensePageSizes = [...expensePageSizeSelect.options].map((option) => Number(option.value));
 let isPremiumUser = false;
 let suggestionTimer;
 let suggestionController;
@@ -44,6 +47,25 @@ function showMessage(text, type = 'danger') {
 function clearMessage() {
   message.textContent = '';
   message.className = 'alert d-none';
+}
+
+function restoreExpensePageSize() {
+  try {
+    const savedPageSize = Number(window.localStorage.getItem(expensePageSizeStorageKey));
+    if (validExpensePageSizes.includes(savedPageSize)) {
+      expensePageSizeSelect.value = String(savedPageSize);
+    }
+  } catch (error) {
+    showAppMessage('Could not load your expenses-per-page preference.');
+  }
+}
+
+function saveExpensePageSize() {
+  try {
+    window.localStorage.setItem(expensePageSizeStorageKey, expensePageSizeSelect.value);
+  } catch (error) {
+    showAppMessage('Could not save your expenses-per-page preference.');
+  }
 }
 
 function showPremiumMessage(text, type = 'danger') {
@@ -306,7 +328,7 @@ function renderExpenses(expenses) {
   emptyMessage.textContent = expenses.length ? '' : 'No expenses yet. Add your first one above.';
   emptyMessage.classList.toggle('d-none', expenses.length > 0);
 
-  const pageSize = 10;
+  const pageSize = Number(expensePageSizeSelect.value);
   const totalPages = Math.max(1, Math.ceil(expenses.length / pageSize));
   expensePage = Math.min(expensePage, totalPages);
   const start = (expensePage - 1) * pageSize;
@@ -349,6 +371,12 @@ function renderExpenses(expenses) {
   expenseNextButton.disabled = expensePage >= totalPages;
 }
 
+expensePageSizeSelect.addEventListener('change', () => {
+  saveExpensePageSize();
+  expensePage = 1;
+  renderExpenses(expensesData);
+});
+
 expensePreviousButton.addEventListener('click', () => {
   if (expensePage > 1) {
     expensePage -= 1;
@@ -357,7 +385,7 @@ expensePreviousButton.addEventListener('click', () => {
 });
 
 expenseNextButton.addEventListener('click', () => {
-  if (expensePage < Math.ceil(expensesData.length / 10)) {
+  if (expensePage < Math.ceil(expensesData.length / Number(expensePageSizeSelect.value))) {
     expensePage += 1;
     renderExpenses(expensesData);
   }
@@ -556,6 +584,7 @@ document.querySelector('#logout-button').addEventListener('click', async () => {
 });
 
 async function initializeApp() {
+  restoreExpensePageSize();
   const response = await fetch('/api/auth/me');
   if (response.status === 401) {
     window.location.replace('/auth/');

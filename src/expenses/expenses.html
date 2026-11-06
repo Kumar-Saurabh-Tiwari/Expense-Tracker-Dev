@@ -66,17 +66,30 @@
       <h2 class="h5 mb-3" id="expense-list-title">Your expenses</h2>
       <p class="text-secondary" id="empty-message">Loading expenses...</p>
       <ul class="list-group" id="expense-list"></ul>
-      <nav class="d-flex justify-content-between align-items-center gap-3 mt-3"
+      <nav class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3"
            id="expense-pagination" aria-label="Expense pages">
-        <button class="btn btn-outline-secondary btn-sm" id="expense-previous" type="button" disabled>
-          Previous
-        </button>
+        <div class="d-flex align-items-center gap-2">
+          <label class="small text-secondary text-nowrap" for="expense-page-size">Expenses per page</label>
+          <select class="form-select form-select-sm" id="expense-page-size" style="width: auto">
+            <option value="5">5</option>
+            <option value="8">8</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="25">25</option>
+            <option value="40">40</option>
+          </select>
+        </div>
         <span class="small text-secondary text-center" id="expense-page-status" aria-live="polite">
           Page 1 of 1 · 0 expenses
         </span>
-        <button class="btn btn-outline-secondary btn-sm" id="expense-next" type="button" disabled>
-          Next
-        </button>
+        <div class="btn-group" role="group" aria-label="Expense page navigation">
+          <button class="btn btn-outline-secondary btn-sm" id="expense-previous" type="button" disabled>
+            Previous
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" id="expense-next" type="button" disabled>
+            Next
+          </button>
+        </div>
       </nav>
     </section>
 
