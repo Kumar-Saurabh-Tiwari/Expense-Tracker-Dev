@@ -346,6 +346,12 @@ function renderExpenses(expenses) {
     subtitle.className = 'text-secondary';
     subtitle.textContent = `${expense.category} · ${new Date(expense.created_at).toLocaleDateString()}`;
     details.append(title, subtitle);
+    if (expense.note) {
+      const note = document.createElement('div');
+      note.className = 'small text-secondary mt-1';
+      note.textContent = expense.note;
+      details.append(note);
+    }
 
     const actions = document.createElement('div');
     actions.className = 'd-flex align-items-center gap-2';

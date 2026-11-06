@@ -56,7 +56,7 @@ router.get('/insight', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const [expenses] = await db.execute(
-      `SELECT id, amount, description, category, created_at
+      `SELECT id, amount, description, category, note, created_at
        FROM expenses
        WHERE user_id = ?
        ORDER BY created_at DESC, id DESC`,
@@ -75,9 +75,14 @@ router.post('/', async (req, res, next) => {
     : typeof body.amount === 'string' ? body.amount.trim() : '';
   const description = typeof body.description === 'string' ? body.description.trim() : '';
   const category = typeof body.category === 'string' ? body.category : '';
+  const note = typeof body.note === 'string' ? body.note.trim() : '';
 
   if (!/^\d{1,8}(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) {
     return res.status(400).json({ message: 'Enter an amount greater than zero (up to two decimal places).' });
+  }
+  if ((body.note !== undefined && body.note !== null && typeof body.note !== 'string') ||
+      note.length > 255) {
+    return res.status(400).json({ message: 'Enter a note of up to 255 characters.' });
   }
   if (!description || description.length > 255) {
     return res.status(400).json({ message: 'Enter a description of up to 255 characters.' });
@@ -99,16 +104,16 @@ router.post('/', async (req, res, next) => {
       return res.status(401).json({ message: 'Please log in again.' });
     }
     const [result] = await connection.execute(
-      `INSERT INTO expenses (user_id, amount, description, category)
-       VALUES (?, ?, ?, ?)`,
-      [req.session.user.id, amount, description, category]
+      `INSERT INTO expenses (user_id, amount, description, category, note)
+       VALUES (?, ?, ?, ?, ?)`,
+      [req.session.user.id, amount, description, category, note || null]
     );
     await connection.execute(
       'UPDATE users SET total_expenses = total_expenses + ? WHERE id = ?',
       [amount, req.session.user.id]
     );
     const [expenses] = await connection.execute(
-      `SELECT id, amount, description, category, created_at
+      `SELECT id, amount, description, category, note, created_at
        FROM expenses
        WHERE id = ? AND user_id = ?`,
       [result.insertId, req.session.user.id]

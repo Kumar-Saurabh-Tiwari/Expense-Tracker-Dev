@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS expenses (
   amount DECIMAL(10, 2) NOT NULL,
   description VARCHAR(255) NOT NULL,
   category VARCHAR(50) NOT NULL,
+  note VARCHAR(255) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX expenses_user_created (user_id, created_at),
   CONSTRAINT expenses_user_fk FOREIGN KEY (user_id)

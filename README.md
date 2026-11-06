@@ -34,6 +34,8 @@ A small Node.js and Express app with Bootstrap signup and login pages. Users are
 
 4. Open <http://localhost:3000>.
 
+Database changes are managed with Sequelize migrations. After the app has created the database tables, apply pending migrations with `npm run db:migrate`; use `npm run db:migrate:undo` to roll back the latest migration.
+
 Cashfree runs in Sandbox by default. Configure `CASHFREE_API_KEY` and `CASHFREE_API_SECRET` in `.env`, and keep the secret server-side. Premium membership costs ₹199 INR by default; `PREMIUM_AMOUNT`, `PREMIUM_CURRENCY`, `CASHFREE_ENV`, `CASHFREE_API_VERSION`, and `APP_URL` can be set in `.env`. The checkout asks for the customer's 10-digit Indian mobile number because Cashfree requires it.
 
 The login page is at `/auth/` and signup is at `/auth/signup.html`. After login, the app opens at `/app/`. The app creates or updates the expenses table when it starts. Existing expenses are kept during the update; older rows without an owner stay unassigned. New expenses are saved per user through `POST /api/expenses` and loaded from `GET /api/expenses` whenever the app page opens or refreshes. The API also supports deleting an expense with `DELETE /api/expenses/:id`. Expense APIs require a logged-in session, and users can only access their own expenses.
